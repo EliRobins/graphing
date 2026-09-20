@@ -82,7 +82,7 @@ impl Graph {
         const GRAPH_THICKNESS: f32 = 2.0;
         match &self.function {
             GeneralFunction::Function(function) => {
-                const CURVE_SEGMENTS: u16 = 10000;
+                const CURVE_SEGMENTS: u16 = 5000;
                 let delta_x = screen_width() / f32::from(CURVE_SEGMENTS);
                 let mut next_start = (0.0, camera_coords_y(camera, -function(graph_coords_x(camera, 0.0))));
                 for _ in 1..CURVE_SEGMENTS {
