@@ -10,11 +10,11 @@ use graphing::*;
 async fn main() {
     let mut camera = graphing::Camera::new();
     let graphs = vec![
-        Graph::new(weierstrass, RED),
-        Graph::new(f64::sin, BLUE),
-        Graph::new(square_wave, GREEN),
-        Graph::new(|x| 1.0 / x, PINK),
-        //Graph::new_implicit(circle, YELLOW),
+        //Graph::new(weierstrass, RED),
+        //Graph::new(f64::sin, BLUE),
+        //Graph::new(square_wave, GREEN),
+        //Graph::new(|x| 1.0 / x, PINK),
+        Graph::new_implicit(circle, YELLOW),
         //Graph::new_implicit(folium, PURPLE),
     ];
 

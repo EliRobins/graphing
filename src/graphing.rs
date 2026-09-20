@@ -21,6 +21,10 @@ pub fn graph_coords_x(camera: &Camera, x: f32) -> f64 {
     f64::from(x - screen_width() / 2.0) * camera.zoom + camera.center.x
 }
 
+fn is_onscreen_y(y: f32) -> bool {
+    0.0 <= y && y <= screen_height()
+}
+
 pub struct Camera {
     pub center: Vec2f64,
     pub zoom: f64,
@@ -68,6 +72,13 @@ pub enum GeneralFunction {
     ImplicitFunction(Box<dyn Fn(f64, f64) -> f64>),
 }
 
+struct MarchingRectangle {
+    dimensions: (f64, f64),
+    location: (usize, usize),
+    children: Option<[Box<MarchingRectangle>; 4]>,
+    depth: u8,
+}
+
 pub struct Graph {
     pub function: GeneralFunction,
     pub color: Color,
@@ -95,34 +106,38 @@ impl Graph {
     pub fn graph(&self, camera: &Camera) {
         match &self.function {
             GeneralFunction::Function(function) => {
-                const CURVE_SEGMENTS: u16 = 1000;
-                let delta_x = screen_width() / f32::from(CURVE_SEGMENTS);
+                const CURVE_DENSITY: f32 = 1.0;
+                const DELTA_X: f32 = 1.0 / CURVE_DENSITY;
+                let curve_segments = (screen_width() * CURVE_DENSITY) as usize;
                 let mut next_start = (0.0, camera_coords_y(camera, -function(graph_coords_x(camera, 0.0))));
-                for _ in 0..CURVE_SEGMENTS {
+                for _ in 0..=curve_segments {
                     let start = next_start;
-                    next_start = (next_start.0 + delta_x, camera_coords_y(camera, -function(graph_coords_x(camera, next_start.0 + delta_x))));
-                    draw_line(start.0, start.1, next_start.0, next_start.1, Self::GRAPH_THICKNESS, self.color);
+                    next_start = (next_start.0 + DELTA_X, camera_coords_y(camera, -function(graph_coords_x(camera, next_start.0 + DELTA_X))));
+                    if is_onscreen_y(start.1) || is_onscreen_y(next_start.1) {
+                        draw_line(start.0, start.1, next_start.0, next_start.1, Self::GRAPH_THICKNESS, self.color);
+                    }
                 }
             }
             GeneralFunction::ImplicitFunction(function) => {
-                const INITIAL_GRID_LENGTH: usize = 400;
+                const GRID_DENSITY: f32 = 1.0;
+                const DELTA: f32 = 1.0 / GRID_DENSITY;
 
-                let delta_x = screen_width() / INITIAL_GRID_LENGTH as f32;
-                let delta_y = screen_height() / INITIAL_GRID_LENGTH as f32;
+                let grid_length_x = (screen_width() * GRID_DENSITY) as usize + 1;
+                let grid_length_y = (screen_height() * GRID_DENSITY) as usize + 1;
 
                 let mut grid: Vec<Vec<bool>> = Vec::new();
                 
-                for i in 0..INITIAL_GRID_LENGTH {
+                for i in 0..=grid_length_x {
                     grid.push(Vec::new());
-                    for j in 0..INITIAL_GRID_LENGTH {
-                        let coords = graph_coords(camera, &Vec2::from((i as f32 * delta_x, j as f32 * delta_y)));
+                    for j in 0..=grid_length_y {
+                        let coords = graph_coords(camera, &Vec2::from((i as f32 * DELTA, j as f32 * DELTA)));
                         grid[i].push(function(coords.x, -coords.y) > 0.0);
                     }
                 }
 
-                for i in 0..INITIAL_GRID_LENGTH-1 {
-                    for j in 0..INITIAL_GRID_LENGTH-1 {
-                        draw_contour((i, j), &grid, (delta_x, delta_y), self.color);
+                for i in 0..grid_length_x {
+                    for j in 0..grid_length_y {
+                        draw_contour((i, j), &grid, DELTA, self.color);
                     }
                 }
             },
@@ -130,11 +145,10 @@ impl Graph {
     }
 }
 
-fn draw_contour(index: (usize, usize), grid: &Vec<Vec<bool>>, dimensions: (f32, f32), color: Color) {
+fn draw_contour(index: (usize, usize), grid: &Vec<Vec<bool>>, delta: f32, color: Color) {
     let (i, j) = index;
     let (i_f, j_f) = (i as f32, j as f32);
-    let (delta_x, delta_y) = dimensions;
-    let (half_delta_x, half_delta_y) = (delta_x / 2.0, delta_y / 2.0);
+    let half_delta = delta / 2.0;
 
     let (point1, point2);
     if grid[i][j] {
@@ -143,37 +157,37 @@ fn draw_contour(index: (usize, usize), grid: &Vec<Vec<bool>>, dimensions: (f32, 
                 if grid[i][j + 1] {
                     return;
                 } else {
-                    point1 = (i_f * delta_x, j_f * delta_y + half_delta_y);
-                    point2 = (i_f * delta_x + half_delta_x, (j_f + 1.0) * delta_y);
+                    point1 = (i_f * delta, j_f * delta + half_delta);
+                    point2 = (i_f * delta + half_delta, (j_f + 1.0) * delta);
                 }
             } else {
                 if grid[i][j + 1] {
-                    point1 = (i_f * delta_x + half_delta_x, (j_f + 1.0) * delta_y);
-                    point2 = ((i_f + 1.0) * delta_x, j_f * delta_y + half_delta_y);
+                    point1 = (i_f * delta + half_delta, (j_f + 1.0) * delta);
+                    point2 = ((i_f + 1.0) * delta, j_f * delta + half_delta);
                 } else {
-                    point1 = (i_f * delta_x, j_f * delta_y + half_delta_y);
-                    point2 = ((i_f + 1.0) * delta_x, j_f * delta_y + half_delta_y);
+                    point1 = (i_f * delta, j_f * delta + half_delta);
+                    point2 = ((i_f + 1.0) * delta, j_f * delta + half_delta);
                 }
             }
         } else {
             if grid[i + 1][j + 1] {
                 if grid[i][j + 1] {
-                    point1 = (i_f * delta_x + half_delta_x, j_f * delta_y);
-                    point2 = ((i_f + 1.0) * delta_x, j_f * delta_y + half_delta_y);
+                    point1 = (i_f * delta + half_delta, j_f * delta);
+                    point2 = ((i_f + 1.0) * delta, j_f * delta + half_delta);
                 } else {
-                    point1 = (i_f * delta_x + half_delta_x, j_f * delta_y);
-                    point2 = ((i_f + 1.0) * delta_x, j_f * delta_y + half_delta_y);
-                    let point3 = (i_f * delta_x, j_f * delta_y + half_delta_y);
-                    let point4 = (i_f * delta_x + half_delta_x, (j_f + 1.0) * delta_y);
+                    point1 = (i_f * delta + half_delta, j_f * delta);
+                    point2 = ((i_f + 1.0) * delta, j_f * delta + half_delta);
+                    let point3 = (i_f * delta, j_f * delta + half_delta);
+                    let point4 = (i_f * delta + half_delta, (j_f + 1.0) * delta);
                     draw_line(point3.0, point3.1, point4.0, point4.0, Graph::GRAPH_THICKNESS, color)
                 }
             } else {
                 if grid[i][j + 1] {
-                    point1 = (i_f * delta_x + half_delta_x, j_f * delta_y);
-                    point2 = (i_f * delta_x + half_delta_x, (j_f + 1.0) * delta_y);
+                    point1 = (i_f * delta + half_delta, j_f * delta);
+                    point2 = (i_f * delta + half_delta, (j_f + 1.0) * delta);
                 } else {
-                    point1 = (i_f * delta_x, j_f * delta_y + half_delta_y);
-                    point2 = (i_f * delta_x + half_delta_x, j_f * delta_y);
+                    point1 = (i_f * delta, j_f * delta + half_delta);
+                    point2 = (i_f * delta + half_delta, j_f * delta);
                 }
             }
         }
@@ -181,37 +195,37 @@ fn draw_contour(index: (usize, usize), grid: &Vec<Vec<bool>>, dimensions: (f32, 
         if grid[i + 1][j] {
             if grid[i + 1][j + 1] {
                 if grid[i][j + 1] {
-                    point1 = (i_f * delta_x, j_f * delta_y + half_delta_y);
-                    point2 = (i_f * delta_x + half_delta_x, j_f * delta_y);
+                    point1 = (i_f * delta, j_f * delta + half_delta);
+                    point2 = (i_f * delta + half_delta, j_f * delta);
                 } else {
-                    point1 = (i_f * delta_x + half_delta_x, j_f * delta_y);
-                    point2 = (i_f * delta_x + half_delta_x, (j_f + 1.0) * delta_y);
+                    point1 = (i_f * delta + half_delta, j_f * delta);
+                    point2 = (i_f * delta + half_delta, (j_f + 1.0) * delta);
                 }
             } else {
                 if grid[i][j + 1] {
-                    point1 = (i_f * delta_x + half_delta_x, (j_f + 1.0) * delta_y);
-                    point2 = ((i_f + 1.0) * delta_x, j_f * delta_y + half_delta_y);
-                    let point3 = (i_f * delta_x, j_f * delta_y + half_delta_y);
-                    let point4 = (i_f * delta_x + half_delta_x, j_f * delta_y);
+                    point1 = (i_f * delta + half_delta, (j_f + 1.0) * delta);
+                    point2 = ((i_f + 1.0) * delta, j_f * delta + half_delta);
+                    let point3 = (i_f * delta, j_f * delta + half_delta);
+                    let point4 = (i_f * delta + half_delta, j_f * delta);
                     draw_line(point3.0, point3.1, point4.0, point4.0, Graph::GRAPH_THICKNESS, color)
                 } else {
-                    point1 = (i_f * delta_x + half_delta_x, j_f * delta_y);
-                    point2 = ((i_f + 1.0) * delta_x, j_f * delta_y + half_delta_y);
+                    point1 = (i_f * delta + half_delta, j_f * delta);
+                    point2 = ((i_f + 1.0) * delta, j_f * delta + half_delta);
                 }
             }
         } else {
             if grid[i + 1][j + 1] {
                 if grid[i][j + 1] {
-                    point1 = (i_f * delta_x, j_f * delta_y + half_delta_y);
-                    point2 = ((i_f + 1.0) * delta_x, j_f * delta_y + half_delta_y);
+                    point1 = (i_f * delta, j_f * delta + half_delta);
+                    point2 = ((i_f + 1.0) * delta, j_f * delta + half_delta);
                 } else {
-                    point1 = (i_f * delta_x + half_delta_x, (j_f + 1.0) * delta_y);
-                    point2 = ((i_f + 1.0) * delta_x, j_f * delta_y + half_delta_y);
+                    point1 = (i_f * delta + half_delta, (j_f + 1.0) * delta);
+                    point2 = ((i_f + 1.0) * delta, j_f * delta + half_delta);
                 }
             } else {
                 if grid[i][j + 1] {
-                    point1 = (i_f * delta_x, j_f * delta_y + half_delta_y);
-                    point2 = (i_f * delta_x + half_delta_x, (j_f + 1.0) * delta_y);
+                    point1 = (i_f * delta, j_f * delta + half_delta);
+                    point2 = (i_f * delta + half_delta, (j_f + 1.0) * delta);
                 } else {
                     return;
                 }
@@ -225,8 +239,9 @@ fn draw_contour(index: (usize, usize), grid: &Vec<Vec<bool>>, dimensions: (f32, 
 pub fn draw_frame(camera: &Camera, graphs: &[Graph], show_fps: bool) {
     const AXIS_THICKNESS: f32 = 2.0;
     const AXIS_COLOR: Color = WHITE;
+    const BACKGROUND_COLOR: Color = BLACK;
 
-    clear_background(BLACK);
+    clear_background(BACKGROUND_COLOR);
 
     if show_fps { draw_fps(); }
 
