@@ -49,10 +49,10 @@ impl Camera {
         if mouse_scroll != 0.0 {
             let mouse_pos = graph_coords(self, &Vec2::from(mouse_position()));
             let diff = self.center - mouse_pos;
-            if mouse_scroll == 1.0 {
+            if mouse_scroll > 0.0 {
                 self.zoom /= Self::ZOOM_FACTOR;
                 self.center = mouse_pos + diff / Self::ZOOM_FACTOR;
-            } else if mouse_scroll == -1.0 {
+            } else if mouse_scroll < 0.0 {
                 self.zoom *= Self::ZOOM_FACTOR;
                 self.center = mouse_pos + diff * Self::ZOOM_FACTOR;
             }
