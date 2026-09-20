@@ -1,4 +1,4 @@
-mod functions;
+//mod functions;
 mod vec2f64;
 
 use macroquad::prelude::*;

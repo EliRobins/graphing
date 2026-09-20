@@ -1,4 +1,4 @@
-use std::f64::consts;
+/*use std::f64::consts;
 
 pub fn weierstrass(x: f64) -> f64 {
     const ITERATIONS: u64 = 60;
@@ -26,4 +26,4 @@ pub fn square_wave(x: f64) -> f64 {
         sign = !sign;
     }
     sum
-}
+}*/
