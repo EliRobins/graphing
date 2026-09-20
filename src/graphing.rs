@@ -72,13 +72,6 @@ pub enum GeneralFunction {
     ImplicitFunction(Box<dyn Fn(f64, f64) -> f64>),
 }
 
-struct MarchingRectangle {
-    dimensions: (f64, f64),
-    location: (usize, usize),
-    children: Option<[Box<MarchingRectangle>; 4]>,
-    depth: u8,
-}
-
 pub struct Graph {
     pub function: GeneralFunction,
     pub color: Color,
@@ -119,7 +112,7 @@ impl Graph {
                 }
             }
             GeneralFunction::ImplicitFunction(function) => {
-                const GRID_DENSITY: f32 = 1.0;
+                const GRID_DENSITY: f32 = 0.5;
                 const DELTA: f32 = 1.0 / GRID_DENSITY;
 
                 let grid_length_x = (screen_width() * GRID_DENSITY) as usize + 1;
