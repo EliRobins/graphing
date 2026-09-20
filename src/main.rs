@@ -82,7 +82,7 @@ impl Graph {
         const GRAPH_THICKNESS: f32 = 2.0;
         match &self.function {
             GeneralFunction::Function(function) => {
-                const CURVE_SEGMENTS: u16 = 1000;
+                const CURVE_SEGMENTS: u16 = 10000;
                 let delta_x = screen_width() / f32::from(CURVE_SEGMENTS);
                 let mut next_start = (0.0, camera_coords_y(camera, -function(graph_coords_x(camera, 0.0))));
                 for _ in 1..CURVE_SEGMENTS {
@@ -118,11 +118,9 @@ fn draw_frame(camera: &Camera, graphs: &[Graph], show_fps: bool) {
 async fn main() {
     let mut camera = Camera::new();
     let graphs = vec![
+        Graph::new(f64::exp, BLUE),
         Graph::new(f64::sin, RED),
-        Graph::new(f64::cos, BLUE),
-        Graph::new(f64::atan, YELLOW),
-        Graph::new(weierstrass, GREEN),
-        Graph::new(|x| x * x, PURPLE),
+        Graph::new(f64::atan, PURPLE),
     ];
 
     let mut show_fps = false;
