@@ -2,7 +2,7 @@ mod functions;
 mod vec2f64;
 
 use macroquad::prelude::*;
-use functions::*;
+//use functions::*;
 use vec2f64::Vec2f64;
 
 fn screen_dimensions() -> Vec2 {
