@@ -33,7 +33,7 @@ impl Camera {
     pub fn new() -> Self {
         Self {
             center: Vec2f64::default(),
-            zoom: Self::DEFAULT_ZOOM_LEVEL / screen_height() as f64,
+            zoom: 2.0 * Self::DEFAULT_ZOOM_LEVEL / screen_height() as f64,
         }
     }
 
@@ -57,7 +57,7 @@ impl Camera {
 
         if is_key_down(KeyCode::H) {
             self.center = Vec2f64::default();
-            self.zoom = Self::DEFAULT_ZOOM_LEVEL / screen_height() as f64;
+            self.zoom = 2.0 * Self::DEFAULT_ZOOM_LEVEL / screen_height() as f64;
         }
     }
 }
