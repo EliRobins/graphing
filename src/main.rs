@@ -3,8 +3,10 @@ mod vec2f64;
 mod graphing;
 
 use macroquad::prelude::*;
-use functions::*;
 use graphing::*;
+
+#[allow(unused_imports)]
+use functions::*;
 
 #[macroquad::main("Graphing Calculator")]
 async fn main() {
@@ -12,8 +14,8 @@ async fn main() {
     let graphs = vec![
         Graph::new(weierstrass, RED),
         Graph::new(f64::sin, BLUE),
-        Graph::new(square_wave, GREEN),
-        Graph::new(|x| 1.0 / x, PINK),
+        //Graph::new(square_wave, GREEN),
+        //Graph::new(|x| 1.0 / x, PINK),
         //Graph::new_implicit(circle, YELLOW),
         //Graph::new_implicit(folium, PURPLE),
     ];
